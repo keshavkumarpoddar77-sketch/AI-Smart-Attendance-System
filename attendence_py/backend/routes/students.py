@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-import models
-import schemas
-from database import get_db
+from attendence_py.backend import models
+from attendence_py.backend import schemas
+from attendence_py.backend.database import get_db
 
 
 router = APIRouter(
@@ -11,6 +11,10 @@ router = APIRouter(
     tags=["Students"]
 )
 
+
+# =========================
+# CREATE STUDENT
+# =========================
 
 @router.post("/", response_model=schemas.StudentResponse)
 def create_student(
@@ -45,6 +49,10 @@ def create_student(
     return new_student
 
 
+# =========================
+# GET ALL STUDENTS
+# =========================
+
 @router.get("/", response_model=list[schemas.StudentResponse])
 def get_students(
     db: Session = Depends(get_db)
@@ -56,6 +64,10 @@ def get_students(
 
     return students
 
+
+# =========================
+# GET SINGLE STUDENT
+# =========================
 
 @router.get("/{student_id}", response_model=schemas.StudentResponse)
 def get_student(

@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 
-from database import engine
-import models
+from attendence_py.backend.database import engine
+from attendence_py.backend import models
 
-from routes import students
-from routes import attendance
-from routes import recognition
+from attendence_py.backend.routes import students
+from attendence_py.backend.routes import attendance
+from attendence_py.backend.routes import recognition
 
 
 # Create database tables

@@ -13,7 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
-from database import Base
+from attendence_py.backend.database import Base
 
 
 # =========================

@@ -8,11 +8,11 @@ import cv2
 
 from datetime import date, datetime
 
-import models
-import schemas
 
-from database import get_db
-from ai.face_recognition import recognize_face
+from attendence_py.backend import models
+from attendence_py.backend import schemas
+from attendence_py.backend.database import get_db
+from attendence_py.backend.ai.face_recognition import recognize_face
 
 
 # =====================================
@@ -66,7 +66,6 @@ async def register_face(
     ).first()
 
     if not student:
-
         raise HTTPException(
             status_code=404,
             detail="Student not found"
@@ -100,6 +99,12 @@ async def register_face(
             buffer
         )
 
+    # Mark face as registered
+    student.face_registered = True
+
+    db.commit()
+    db.refresh(student)
+
     return {
         "success": True,
         "message": "Face registered successfully",
@@ -131,10 +136,11 @@ def get_registered_faces(
             "total_images": 0
         }
 
-    # Get image files only
     images = []
 
-    for file_name in os.listdir(student_folder):
+    for file_name in os.listdir(
+        student_folder
+    ):
 
         if file_name.lower().endswith(
             (".jpg", ".jpeg", ".png")
@@ -211,22 +217,22 @@ async def recognize_student(
 
     try:
 
+        # ---------------------------------
         # Read uploaded image
+        # ---------------------------------
+
         image_bytes = await file.read()
 
-        # Convert bytes to NumPy array
         image_array = np.frombuffer(
             image_bytes,
             np.uint8
         )
 
-        # Convert array into OpenCV image
         image = cv2.imdecode(
             image_array,
             cv2.IMREAD_COLOR
         )
 
-        # Check image
         if image is None:
 
             return {
@@ -235,16 +241,14 @@ async def recognize_student(
             }
 
 
-        # =====================================
-        # RECOGNIZE FACE USING AI MODEL
-        # =====================================
+        # ---------------------------------
+        # Recognize face using AI model
+        # ---------------------------------
 
         result = recognize_face(
             image
         )
 
-
-        # If face is not recognized
         if not result.get(
             "success",
             False
@@ -259,15 +263,18 @@ async def recognize_student(
             }
 
 
+        # ---------------------------------
         # Get recognized student ID
+        # ---------------------------------
+
         student_id = str(
             result["student_id"]
         )
 
 
-        # =====================================
-        # FIND STUDENT IN DATABASE
-        # =====================================
+        # ---------------------------------
+        # Find student in database
+        # ---------------------------------
 
         student = db.query(
             models.Student
@@ -280,12 +287,18 @@ async def recognize_student(
 
             return {
                 "success": False,
-                "message": "Face recognized but student is not found in database",
+                "message": (
+                    "Face recognized but student "
+                    "is not found in database"
+                ),
                 "student_id": student_id
             }
 
 
-        # Get confidence safely
+        # ---------------------------------
+        # Get confidence
+        # ---------------------------------
+
         confidence = float(
             result.get(
                 "confidence",
@@ -294,9 +307,9 @@ async def recognize_student(
         )
 
 
-        # =====================================
-        # SAVE RECOGNITION LOG
-        # =====================================
+        # ---------------------------------
+        # Save recognition log
+        # ---------------------------------
 
         recognition_log = models.RecognitionLog(
             student_id=student.student_id,
@@ -311,9 +324,9 @@ async def recognize_student(
         )
 
 
-        # =====================================
-        # CHECK TODAY'S ATTENDANCE
-        # =====================================
+        # ---------------------------------
+        # Check today's attendance
+        # ---------------------------------
 
         today = date.today()
 
@@ -322,15 +335,14 @@ async def recognize_student(
         ).filter(
             models.Attendance.student_id
             == student.student_id,
-
             models.Attendance.date
             == today
         ).first()
 
 
-        # =====================================
-        # MARK ATTENDANCE
-        # =====================================
+        # ---------------------------------
+        # Mark attendance
+        # ---------------------------------
 
         if not existing_attendance:
 
@@ -338,7 +350,8 @@ async def recognize_student(
                 student_id=student.student_id,
                 status="Present",
                 date=today,
-                time=datetime.now().time()
+                time=datetime.now().time(),
+                confidence=confidence
             )
 
             db.add(
@@ -356,16 +369,16 @@ async def recognize_student(
             )
 
 
-        # =====================================
-        # SAVE DATABASE
-        # =====================================
+        # ---------------------------------
+        # Save database
+        # ---------------------------------
 
         db.commit()
 
 
-        # =====================================
-        # SUCCESS RESPONSE
-        # =====================================
+        # ---------------------------------
+        # Success response
+        # ---------------------------------
 
         return {
             "success": True,
