@@ -1,12 +1,12 @@
 import streamlit as st
 import requests
 import pandas as pd
-from datetime import date
 
 
-# ==========================================
-# CONFIG
-# ==========================================
+# ==================================================
+# STREAMLIT CONFIG
+# IMPORTANT: Only call this ONCE
+# ==================================================
 
 st.set_page_config(
     page_title="AI Smart Attendance System",
@@ -14,24 +14,21 @@ st.set_page_config(
     layout="wide"
 )
 
+
+# ==================================================
+# BACKEND API
+# ==================================================
+
+# LOCAL BACKEND FOR TESTING
 API_URL = "http://127.0.0.1:8000"
 
-import streamlit as st
+# AFTER DEPLOYING FASTAPI ON RENDER, REPLACE ABOVE WITH:
+# API_URL = "https://your-backend-name.onrender.com"
 
-st.set_page_config(
-    page_title="AI Attendance",
-    page_icon="🎓"
-)
 
-st.title("🎓 AI Smart Attendance System")
-
-st.success("Streamlit is working!")
-
-st.write("Frontend test successful.")
-
-# ==========================================
-# API FUNCTIONS
-# ==========================================
+# ==================================================
+# HELPER FUNCTIONS
+# ==================================================
 
 def api_get(endpoint):
     try:
@@ -39,162 +36,151 @@ def api_get(endpoint):
             f"{API_URL}{endpoint}",
             timeout=10
         )
+        return response
 
-        if response.status_code == 200:
-            return response.json()
-
-        st.error(f"API Error: {response.text}")
-        return []
-
-    except requests.exceptions.ConnectionError:
-        st.error(
-            "❌ FastAPI backend is not running. "
-            "Start the backend first."
-        )
-        return []
-
-    except Exception as e:
-        st.error(f"❌ {e}")
-        return []
+    except requests.exceptions.RequestException as e:
+        st.error(f"Backend connection error: {e}")
+        return None
 
 
 def api_post(endpoint, data=None, files=None):
     try:
-        if files is not None:
-            response = requests.post(
-                f"{API_URL}{endpoint}",
-                files=files,
-                timeout=30
-            )
-        else:
-            response = requests.post(
-                f"{API_URL}{endpoint}",
-                json=data,
-                timeout=30
-            )
-
+        response = requests.post(
+            f"{API_URL}{endpoint}",
+            json=data if files is None else None,
+            files=files,
+            timeout=30
+        )
         return response
 
-    except requests.exceptions.ConnectionError:
-        st.error(
-            "❌ FastAPI backend is not running."
-        )
-        return None
-
-    except Exception as e:
-        st.error(f"❌ {e}")
+    except requests.exceptions.RequestException as e:
+        st.error(f"Backend connection error: {e}")
         return None
 
 
-# ==========================================
-# TITLE
-# ==========================================
-
-st.title("🎓 AI Smart Attendance Monitoring System")
-
-st.caption(
-    "Face Recognition • Automatic Attendance • AI Monitoring"
-)
-
-
-# ==========================================
+# ==================================================
 # SIDEBAR
-# ==========================================
+# ==================================================
 
-st.sidebar.title("⚙️ Navigation")
+st.sidebar.title("🎓 AI Attendance")
 
-page = st.sidebar.radio(
-    "Select Feature",
+menu = st.sidebar.radio(
+    "Navigation",
     [
-        "📊 Dashboard",
-        "➕ Add Student",
-        "📸 Face Registration",
-        "🎥 Face Recognition",
-        "📋 Mark Attendance",
-        "👨‍🎓 Students",
-        "📅 Today's Attendance",
-        "🤖 Recognition Logs"
+        "🏠 Dashboard",
+        "👨‍🎓 Add Student",
+        "📷 Face Registration",
+        "🔍 Face Recognition",
+        "📅 Attendance",
+        "👥 Students",
+        "📊 Recognition Logs"
     ]
 )
 
 
-# ==========================================
+# ==================================================
 # DASHBOARD
-# ==========================================
+# ==================================================
 
-if page == "📊 Dashboard":
+if menu == "🏠 Dashboard":
 
-    st.header("📊 Dashboard")
+    st.title("🤖 AI Smart Attendance Monitoring System")
 
-    students = api_get("/students")
-    attendance = api_get("/attendance")
-    logs = api_get("/recognition/logs")
-
-    total_students = len(students) if students else 0
-    total_attendance = len(attendance) if attendance else 0
-    total_logs = len(logs) if logs else 0
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            "👨‍🎓 Total Students",
-            total_students
-        )
-
-    with col2:
-        st.metric(
-            "✅ Attendance Records",
-            total_attendance
-        )
-
-    with col3:
-        st.metric(
-            "🤖 Recognition Logs",
-            total_logs
-        )
+    st.write(
+        "Face Recognition based Smart Attendance System"
+    )
 
     st.divider()
 
-    st.subheader("🚀 System Features")
+    response = api_get("/health")
 
-    c1, c2, c3 = st.columns(3)
+    if response and response.status_code == 200:
 
-    with c1:
-        st.info(
-            """
-            👨‍🎓 Student Management
+        st.success("🟢 Backend Connected")
 
-            Add and manage students.
-            """
+    else:
+
+        st.warning(
+            "🟡 Backend is not connected. "
+            "If deployed online, deploy FastAPI first."
         )
 
-    with c2:
-        st.info(
-            """
-            📸 Face Registration
+    col1, col2, col3 = st.columns(3)
 
-            Register student face images.
-            """
-        )
+    # ----------------------------------------------
 
-    with c3:
-        st.info(
-            """
-            🤖 AI Recognition
+    with col1:
 
-            Recognize students automatically.
-            """
-        )
+        students_response = api_get("/students")
+
+        if students_response and students_response.status_code == 200:
+
+            students = students_response.json()
+
+            st.metric(
+                "👨‍🎓 Total Students",
+                len(students)
+            )
+
+        else:
+
+            st.metric(
+                "👨‍🎓 Total Students",
+                0
+            )
+
+    # ----------------------------------------------
+
+    with col2:
+
+        attendance_response = api_get("/attendance")
+
+        if attendance_response and attendance_response.status_code == 200:
+
+            attendance = attendance_response.json()
+
+            st.metric(
+                "✅ Attendance Records",
+                len(attendance)
+            )
+
+        else:
+
+            st.metric(
+                "✅ Attendance Records",
+                0
+            )
+
+    # ----------------------------------------------
+
+    with col3:
+
+        logs_response = api_get("/recognition/logs")
+
+        if logs_response and logs_response.status_code == 200:
+
+            logs = logs_response.json()
+
+            st.metric(
+                "🔍 Recognition Logs",
+                len(logs)
+            )
+
+        else:
+
+            st.metric(
+                "🔍 Recognition Logs",
+                0
+            )
 
 
-# ==========================================
+# ==================================================
 # ADD STUDENT
-# ==========================================
+# ==================================================
 
-elif page == "➕ Add Student":
+elif menu == "👨‍🎓 Add Student":
 
-    st.header("➕ Add New Student")
+    st.title("👨‍🎓 Add New Student")
 
     with st.form("student_form"):
 
@@ -203,7 +189,7 @@ elif page == "➕ Add Student":
         )
 
         name = st.text_input(
-            "Full Name"
+            "Student Name"
         )
 
         email = st.text_input(
@@ -218,16 +204,16 @@ elif page == "➕ Add Student":
             "Year"
         )
 
-        submit = st.form_submit_button(
+        submitted = st.form_submit_button(
             "➕ Add Student"
         )
 
-        if submit:
+        if submitted:
 
             if not student_id or not name:
 
                 st.warning(
-                    "Student ID and Name are required."
+                    "Student ID and Name are required"
                 )
 
             else:
@@ -250,7 +236,7 @@ elif page == "➕ Add Student":
                     if response.status_code in [200, 201]:
 
                         st.success(
-                            "🎉 Student added successfully!"
+                            "Student added successfully!"
                         )
 
                     else:
@@ -260,17 +246,13 @@ elif page == "➕ Add Student":
                         )
 
 
-# ==========================================
+# ==================================================
 # FACE REGISTRATION
-# ==========================================
+# ==================================================
 
-elif page == "📸 Face Registration":
+elif menu == "📷 Face Registration":
 
-    st.header("📸 Face Registration")
-
-    st.write(
-        "Upload clear face images for the student."
-    )
+    st.title("📷 Register Student Face")
 
     student_id = st.text_input(
         "Enter Student ID"
@@ -284,49 +266,38 @@ elif page == "📸 Face Registration":
 
     if uploaded_files:
 
-        st.write(
-            f"Selected {len(uploaded_files)} image(s)"
-        )
+        for uploaded_file in uploaded_files:
 
-        cols = st.columns(3)
+            st.image(
+                uploaded_file,
+                width=200
+            )
 
-        for i, image in enumerate(uploaded_files):
-
-            with cols[i % 3]:
-
-                st.image(
-                    image,
-                    caption=image.name,
-                    use_container_width=True
-                )
-
-    if st.button("📸 Register Face"):
+    if st.button("📷 Register Face"):
 
         if not student_id:
 
             st.warning(
-                "Please enter Student ID."
+                "Please enter Student ID"
             )
 
         elif not uploaded_files:
 
             st.warning(
-                "Please upload at least one image."
+                "Please upload at least one image"
             )
 
         else:
 
             success_count = 0
 
-            for image in uploaded_files:
-
-                image.seek(0)
+            for uploaded_file in uploaded_files:
 
                 files = {
                     "file": (
-                        image.name,
-                        image.getvalue(),
-                        image.type
+                        uploaded_file.name,
+                        uploaded_file.getvalue(),
+                        uploaded_file.type
                     )
                 }
 
@@ -335,223 +306,143 @@ elif page == "📸 Face Registration":
                     files=files
                 )
 
-                if response:
+                if response and response.status_code == 200:
 
-                    if response.status_code == 200:
+                    success_count += 1
 
-                        success_count += 1
+            st.success(
+                f"{success_count} face image(s) registered successfully!"
+            )
 
-                    else:
-
-                        st.error(
-                            response.text
-                        )
-
-            if success_count > 0:
-
-                st.success(
-                    f"🎉 Successfully registered "
-                    f"{success_count} face image(s)!"
-                )
-
-                st.info(
-                    "Next: Generate face embeddings."
-                )
+            st.info(
+                "Next step: Generate face embeddings from the backend."
+            )
 
 
-# ==========================================
+# ==================================================
 # FACE RECOGNITION
-# ==========================================
+# ==================================================
 
-elif page == "🎥 Face Recognition":
+elif menu == "🔍 Face Recognition":
 
-    st.header("🎥 AI Face Recognition")
+    st.title("🔍 Face Recognition")
 
-    st.info(
-        "Take a photo using your webcam "
-        "and let the AI recognize the student."
+    st.write(
+        "Capture an image using your webcam or upload a face image."
     )
 
     camera_image = st.camera_input(
-        "📷 Take a photo"
+        "📸 Open Camera"
     )
 
-    if camera_image:
+    uploaded_image = st.file_uploader(
+        "Or Upload Image",
+        type=["jpg", "jpeg", "png"]
+    )
+
+    image = None
+
+    if camera_image is not None:
+
+        image = camera_image
+
+    elif uploaded_image is not None:
+
+        image = uploaded_image
+
+    if image is not None:
 
         st.image(
-            camera_image,
-            caption="Captured Image",
-            use_container_width=True
+            image,
+            caption="Image for Recognition"
         )
 
-        if st.button("🤖 Recognize Face"):
+        if st.button("🔍 Recognize Face"):
 
-            with st.spinner(
-                "🔍 Recognizing face..."
-            ):
+            files = {
+                "file": (
+                    image.name
+                    if hasattr(image, "name")
+                    else "camera_image.jpg",
 
-                try:
+                    image.getvalue(),
 
-                    files = {
-                        "file": (
-                            "capture.jpg",
-                            camera_image.getvalue(),
-                            "image/jpeg"
-                        )
-                    }
-
-                    response = requests.post(
-                        f"{API_URL}/recognition/recognize",
-                        files=files,
-                        timeout=30
-                    )
-
-                    if response.status_code == 200:
-
-                        result = response.json()
-
-                        if result.get("success"):
-
-                            st.success(
-                                "✅ Face recognized successfully!"
-                            )
-
-                            col1, col2, col3 = st.columns(3)
-
-                            with col1:
-
-                                st.metric(
-                                    "Student ID",
-                                    result.get(
-                                        "student_id",
-                                        "N/A"
-                                    )
-                                )
-
-                            with col2:
-
-                                st.metric(
-                                    "Name",
-                                    result.get(
-                                        "name",
-                                        "N/A"
-                                    )
-                                )
-
-                            with col3:
-
-                                confidence = result.get(
-                                    "confidence"
-                                )
-
-                                if confidence is not None:
-
-                                    st.metric(
-                                        "Confidence",
-                                        f"{float(confidence):.2f}%"
-                                    )
-
-                                else:
-
-                                    st.metric(
-                                        "Confidence",
-                                        "N/A"
-                                    )
-
-                            st.success(
-                                f"📋 Attendance: "
-                                f"{result.get('attendance', 'N/A')}"
-                            )
-
-                        else:
-
-                            st.error(
-                                result.get(
-                                    "message",
-                                    "Face not recognized"
-                                )
-                            )
-
-                            if result.get("error"):
-
-                                st.warning(
-                                    result["error"]
-                                )
-
-                    else:
-
-                        st.error(
-                            f"API Error "
-                            f"{response.status_code}"
-                        )
-
-                        st.code(
-                            response.text
-                        )
-
-                except requests.exceptions.ConnectionError:
-
-                    st.error(
-                        "❌ FastAPI backend is not running."
-                    )
-
-                except Exception as e:
-
-                    st.error(
-                        f"❌ Recognition error: {e}"
-                    )
-
-
-# ==========================================
-# MARK ATTENDANCE
-# ==========================================
-
-elif page == "📋 Mark Attendance":
-
-    st.header("📋 Manual Attendance")
-
-    students = api_get("/students")
-
-    if students:
-
-        student_options = {
-            f"{student['student_id']} - {student['name']}":
-            student["student_id"]
-            for student in students
-        }
-
-        selected = st.selectbox(
-            "Select Student",
-            list(student_options.keys())
-        )
-
-        status = st.selectbox(
-            "Status",
-            ["Present", "Absent"]
-        )
-
-        if st.button("✅ Mark Attendance"):
-
-            selected_id = student_options[selected]
-
-            data = {
-                "student_id": selected_id,
-                "date": str(date.today()),
-                "status": status
+                    "image/jpeg"
+                )
             }
 
-            response = api_post(
-                "/attendance",
-                data=data
-            )
+            with st.spinner(
+                "Recognizing face..."
+            ):
+
+                response = api_post(
+                    "/recognition/recognize",
+                    files=files
+                )
 
             if response:
 
-                if response.status_code in [200, 201]:
+                if response.status_code == 200:
 
-                    st.success(
-                        "✅ Attendance marked successfully!"
-                    )
+                    result = response.json()
+
+                    if result.get("success"):
+
+                        st.success(
+                            "Face Recognized Successfully!"
+                        )
+
+                        col1, col2, col3 = st.columns(3)
+
+                        with col1:
+
+                            st.metric(
+                                "Student ID",
+                                result.get(
+                                    "student_id",
+                                    "N/A"
+                                )
+                            )
+
+                        with col2:
+
+                            st.metric(
+                                "Name",
+                                result.get(
+                                    "name",
+                                    "Unknown"
+                                )
+                            )
+
+                        with col3:
+
+                            confidence = result.get(
+                                "confidence",
+                                0
+                            )
+
+                            st.metric(
+                                "Confidence",
+                                f"{confidence:.2f}%"
+                                if isinstance(
+                                    confidence,
+                                    (int, float)
+                                )
+                                else confidence
+                            )
+
+                        st.success(
+                            "Attendance Marked Present"
+                        )
+
+                    else:
+
+                        st.warning(
+                            result.get(
+                                "message",
+                                "Face not recognized"
+                            )
+                        )
 
                 else:
 
@@ -559,116 +450,148 @@ elif page == "📋 Mark Attendance":
                         response.text
                     )
 
-    else:
 
-        st.warning(
-            "No students found. Add a student first."
-        )
+# ==================================================
+# ATTENDANCE
+# ==================================================
+
+elif menu == "📅 Attendance":
+
+    st.title("📅 Attendance Records")
+
+    response = api_get(
+        "/attendance"
+    )
+
+    if response:
+
+        if response.status_code == 200:
+
+            data = response.json()
+
+            if data:
+
+                df = pd.DataFrame(
+                    data
+                )
+
+                st.dataframe(
+                    df,
+                    use_container_width=True
+                )
+
+                st.download_button(
+                    label="⬇️ Download Attendance CSV",
+                    data=df.to_csv(
+                        index=False
+                    ).encode("utf-8"),
+                    file_name="attendance.csv",
+                    mime="text/csv"
+                )
+
+            else:
+
+                st.info(
+                    "No attendance records found."
+                )
+
+        else:
+
+            st.error(
+                response.text
+            )
 
 
-# ==========================================
+# ==================================================
 # STUDENTS
-# ==========================================
+# ==================================================
 
-elif page == "👨‍🎓 Students":
+elif menu == "👥 Students":
 
-    st.header("👨‍🎓 Registered Students")
+    st.title("👥 Registered Students")
 
-    students = api_get("/students")
+    response = api_get(
+        "/students"
+    )
 
-    if students:
+    if response:
 
-        df = pd.DataFrame(students)
+        if response.status_code == 200:
 
-        st.dataframe(
-            df,
-            use_container_width=True
-        )
+            students = response.json()
 
-        st.metric(
-            "Total Students",
-            len(df)
-        )
+            if students:
 
-    else:
+                df = pd.DataFrame(
+                    students
+                )
 
-        st.info(
-            "No students registered yet."
-        )
+                st.dataframe(
+                    df,
+                    use_container_width=True
+                )
 
+            else:
 
-# ==========================================
-# TODAY'S ATTENDANCE
-# ==========================================
+                st.info(
+                    "No students found."
+                )
 
-elif page == "📅 Today's Attendance":
+        else:
 
-    st.header("📅 Today's Attendance")
-
-    attendance = api_get("/attendance")
-
-    if attendance:
-
-        df = pd.DataFrame(attendance)
-
-        st.dataframe(
-            df,
-            use_container_width=True
-        )
-
-        st.metric(
-            "Attendance Records",
-            len(df)
-        )
-
-    else:
-
-        st.info(
-            "No attendance records found."
-        )
+            st.error(
+                response.text
+            )
 
 
-# ==========================================
+# ==================================================
 # RECOGNITION LOGS
-# ==========================================
+# ==================================================
 
-elif page == "🤖 Recognition Logs":
+elif menu == "📊 Recognition Logs":
 
-    st.header("🤖 AI Recognition Logs")
+    st.title("📊 Face Recognition Logs")
 
-    logs = api_get("/recognition/logs")
+    response = api_get(
+        "/recognition/logs"
+    )
 
-    if logs:
+    if response:
 
-        df = pd.DataFrame(logs)
+        if response.status_code == 200:
 
-        st.dataframe(
-            df,
-            use_container_width=True
-        )
+            logs = response.json()
 
-        st.metric(
-            "Total Recognition Logs",
-            len(df)
-        )
+            if logs:
 
-    else:
+                df = pd.DataFrame(
+                    logs
+                )
 
-        st.info(
-            "No recognition logs available."
-        )
+                st.dataframe(
+                    df,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info(
+                    "No recognition logs found."
+                )
+
+        else:
+
+            st.error(
+                response.text
+            )
 
 
-# ==========================================
+# ==================================================
 # FOOTER
-# ==========================================
+# ==================================================
 
 st.sidebar.divider()
 
-st.sidebar.success(
-    "🟢 AI Attendance System"
-)
-
 st.sidebar.caption(
-    "FastAPI + Streamlit + SQLite + OpenCV"
+    "🤖 AI Smart Attendance Monitoring System"
 )
