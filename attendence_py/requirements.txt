@@ -1,12 +1,20 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-pydantic
-pydantic-settings
-python-jose[cryptography]
-passlib[bcrypt]
-python-multipart
-email-validator
+fastapi==0.141.1
+uvicorn==0.52.0
+sqlalchemy==2.0.52
+pydantic==2.13.4
+python-multipart==0.0.32
 
-pip freeze>
-requirements.txt
+streamlit==1.61.1
+requests==2.34.2
+pandas==3.0.5
+
+numpy==2.5.2
+opencv-python-headless==4.10.0.84
+
+insightface==1.0.1
+onnxruntime==1.28.0
+onnx==1.22.0
+
+scikit-image==0.26.0
+scipy==1.18.0
+pillow==12.3.0
