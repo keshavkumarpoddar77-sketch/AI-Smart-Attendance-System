@@ -1,0 +1,18 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Database
+attendance.db
+
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+
+# Ignore face images
+data/faces/
