@@ -8,7 +8,7 @@ import cv2
 
 from datetime import date, datetime
 
-
+from face_recognition import recognize_face
 from attendence_py.backend import models
 from attendence_py.backend import schemas
 from attendence_py.backend.database import get_db

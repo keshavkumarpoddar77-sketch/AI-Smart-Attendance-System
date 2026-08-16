@@ -1,9 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
-from attendence_py.backend import models
-from attendence_py.backend import schemas
-from attendence_py.backend.database import get_db
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import List
 
 
 router = APIRouter(
@@ -12,79 +9,98 @@ router = APIRouter(
 )
 
 
-# =========================
-# CREATE STUDENT
-# =========================
+# ==========================================
+# STUDENT MODEL
+# ==========================================
 
-@router.post("/", response_model=schemas.StudentResponse)
-def create_student(
-    student: schemas.StudentCreate,
-    db: Session = Depends(get_db)
-):
+class Student(BaseModel):
+    id: str
+    name: str
+    department: str
+    year: str
 
-    existing_student = db.query(
-        models.Student
-    ).filter(
-        models.Student.student_id == student.student_id
-    ).first()
 
-    if existing_student:
-        raise HTTPException(
-            status_code=400,
-            detail="Student ID already exists"
-        )
+# Temporary in-memory student database
+students_db = []
 
-    new_student = models.Student(
-        student_id=student.student_id,
-        name=student.name,
-        email=student.email,
-        department=student.department,
-        year=student.year
+
+# ==========================================
+# GET ALL STUDENTS
+# ==========================================
+
+@router.get("/")
+def get_students():
+
+    return {
+        "total_students": len(students_db),
+        "students": students_db
+    }
+
+
+# ==========================================
+# GET SINGLE STUDENT
+# ==========================================
+
+@router.get("/{student_id}")
+def get_student(student_id: str):
+
+    for student in students_db:
+
+        if student["id"] == student_id:
+
+            return student
+
+    raise HTTPException(
+        status_code=404,
+        detail="Student not found"
     )
 
-    db.add(new_student)
-    db.commit()
-    db.refresh(new_student)
 
-    return new_student
+# ==========================================
+# ADD STUDENT
+# ==========================================
+
+@router.post("/")
+def add_student(student: Student):
+
+    # Check if student already exists
+    for existing_student in students_db:
+
+        if existing_student["id"] == student.id:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Student ID already exists"
+            )
+
+    student_data = student.model_dump()
+
+    students_db.append(student_data)
+
+    return {
+        "message": "Student added successfully",
+        "student": student_data
+    }
 
 
-# =========================
-# GET ALL STUDENTS
-# =========================
+# ==========================================
+# DELETE STUDENT
+# ==========================================
 
-@router.get("/", response_model=list[schemas.StudentResponse])
-def get_students(
-    db: Session = Depends(get_db)
-):
+@router.delete("/{student_id}")
+def delete_student(student_id: str):
 
-    students = db.query(
-        models.Student
-    ).all()
+    for student in students_db:
 
-    return students
+        if student["id"] == student_id:
 
+            students_db.remove(student)
 
-# =========================
-# GET SINGLE STUDENT
-# =========================
+            return {
+                "message": "Student deleted successfully"
+            }
 
-@router.get("/{student_id}", response_model=schemas.StudentResponse)
-def get_student(
-    student_id: str,
-    db: Session = Depends(get_db)
-):
-
-    student = db.query(
-        models.Student
-    ).filter(
-        models.Student.student_id == student_id
-    ).first()
-
-    if not student:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-    return student
+    raise HTTPException(
+        status_code=404,
+        detail="Student not found"
+    )

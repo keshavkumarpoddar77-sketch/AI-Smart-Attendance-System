@@ -2,10 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from attendence_py.backend import models
-from attendence_py.backend import schemas
-from attendence_py.backend.database import get_db
+import models
+import schemas
+from database import get_db
 
+
+# ============================================================
+# ROUTER CONFIGURATION
+# ============================================================
 
 router = APIRouter(
     prefix="/attendance",
@@ -23,6 +27,7 @@ def mark_attendance(
     db: Session = Depends(get_db)
 ):
 
+    # Check whether student exists
     student = db.query(
         models.Student
     ).filter(
@@ -30,13 +35,18 @@ def mark_attendance(
     ).first()
 
     if not student:
+
         raise HTTPException(
             status_code=404,
             detail="Student not found"
         )
 
+
+    # Get today's date
     today = datetime.now().date()
 
+
+    # Check whether attendance is already marked
     existing_attendance = db.query(
         models.Attendance
     ).filter(
@@ -44,14 +54,20 @@ def mark_attendance(
         models.Attendance.date == today
     ).first()
 
+
     if existing_attendance:
+
         raise HTTPException(
             status_code=400,
             detail="Attendance already marked today"
         )
 
+
+    # Current date and time
     now = datetime.now()
 
+
+    # Create attendance record
     new_attendance = models.Attendance(
         student_id=attendance.student_id,
         date=now.date(),
@@ -60,9 +76,14 @@ def mark_attendance(
         confidence=attendance.confidence
     )
 
+
+    # Save to database
     db.add(new_attendance)
+
     db.commit()
+
     db.refresh(new_attendance)
+
 
     return {
         "success": True,
@@ -121,22 +142,34 @@ def get_student_attendance(
     db: Session = Depends(get_db)
 ):
 
+    # Check student
     student = db.query(
         models.Student
     ).filter(
         models.Student.student_id == student_id
     ).first()
 
+
     if not student:
+
         raise HTTPException(
             status_code=404,
             detail="Student not found"
         )
 
+
+    # Get attendance records
     records = db.query(
         models.Attendance
     ).filter(
         models.Attendance.student_id == student_id
     ).all()
 
-    return records
+
+    return {
+        "success": True,
+        "student_id": student_id,
+        "student_name": student.name,
+        "total_records": len(records),
+        "attendance": records
+    }

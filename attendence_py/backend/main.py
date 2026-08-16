@@ -1,54 +1,49 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from attendence_py.backend.database import engine
-from attendence_py.backend import models
-
-from attendence_py.backend.routes import students
-from attendence_py.backend.routes import attendance
-from attendence_py.backend.routes import recognition
-
-
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
+from routes.students import router as students_router
+from routes.attendance import router as attendance_router
+from routes.recognition import router as recognition_router
+from routes.embeddings import router as embeddings_router
+from routes.dashboard import router as dashboard_router
 
 
-# Create FastAPI application
 app = FastAPI(
-    title="AI Smart Attendance Monitoring System",
-    description="AI-powered Face Recognition Attendance System",
+    title="AI Smart Attendance System",
+    description="Complete Face Recognition Attendance Backend",
     version="1.0.0"
 )
 
 
-# ==============================
-# Include API Routes
-# ==============================
-
-app.include_router(students.router)
-
-app.include_router(attendance.router)
-
-app.include_router(recognition.router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-# ==============================
-# Home API
-# ==============================
+# Add all routers
+app.include_router(students_router)
+app.include_router(attendance_router)
+app.include_router(recognition_router)
+app.include_router(embeddings_router)
+app.include_router(dashboard_router)
+
 
 @app.get("/")
 def home():
     return {
-        "message": "AI Smart Attendance Monitoring System API is running"
+        "success": True,
+        "message": "AI Smart Attendance Backend is running successfully"
     }
 
-
-# ==============================
-# Health Check API
-# ==============================
 
 @app.get("/health")
 def health_check():
     return {
+        "success": True,
         "status": "healthy",
-        "message": "Backend is working correctly"
+        "message": "Backend is connected successfully"
     }

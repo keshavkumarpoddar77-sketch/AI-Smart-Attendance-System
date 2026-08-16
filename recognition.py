@@ -12,7 +12,7 @@ import models
 import schemas
 
 from database import get_db
-from ai.face_recognition import recognize_face
+from face_recognition import recognize_face
 
 
 # =====================================

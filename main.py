@@ -1,54 +1,60 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from database import engine
+from database import Base, engine
 import models
 
-from routes import students
-from routes import attendance
-from routes import recognition
+from students import router as students_router
+from attendance import router as attendance_router
+from recognition import router as recognition_router
 
 
 # Create database tables
-models.Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 
-# Create FastAPI application
 app = FastAPI(
     title="AI Smart Attendance Monitoring System",
-    description="AI-powered Face Recognition Attendance System",
+    description="Face Recognition Based Smart Attendance System",
     version="1.0.0"
 )
 
 
-# ==============================
-# Include API Routes
-# ==============================
+# Allow Streamlit frontend to connect
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app.include_router(students.router)
 
-app.include_router(attendance.router)
+# Include API routers
+app.include_router(students_router)
+app.include_router(attendance_router)
+app.include_router(recognition_router)
 
-app.include_router(recognition.router)
 
-
-# ==============================
-# Home API
-# ==============================
+# =========================
+# HOME
+# =========================
 
 @app.get("/")
 def home():
     return {
-        "message": "AI Smart Attendance Monitoring System API is running"
+        "message": "AI Smart Attendance Monitoring System API is running",
+        "status": "success"
     }
 
 
-# ==============================
-# Health Check API
-# ==============================
+# =========================
+# HEALTH CHECK
+# =========================
 
 @app.get("/health")
 def health_check():
     return {
         "status": "healthy",
-        "message": "Backend is working correctly"
+        "message": "Backend is connected and working correctly"
     }
